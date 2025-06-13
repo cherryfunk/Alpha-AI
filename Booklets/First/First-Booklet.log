@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.6.12)  13 JUN 2025 13:09
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.6.12)  13 JUN 2025 13:14
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -268,11 +268,6 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 [3]
 Missing character: There is no ε (U+03B5) in font [lmroman12-bold]:mapping=tex-text;!
 
-Overfull \hbox (29.1434pt too wide) in paragraph at lines 63--64
-[]\TU/lmr/bx/n/12 Transcendence \TU/lmr/m/n/12 — Finally, **\TU/lmr/bx/n/12 inf. Spirit\TU/lmr/m/n/12 **, **\TU/lmr/bx/n/12 -inf. Universe\TU/lmr/m/n/12 **, **\TU/lmr/bx/n/12 i*inf. Dream/Drug\TU/lmr/m/n/12 **,
- []
-
-
 
 [4] (./First-Booklet.aux)
  ***********
@@ -285,10 +280,10 @@ Package rerunfilecheck Info: File `First-Booklet.out' has not changed.
 Here is how much of TeX's memory you used:
  8707 strings out of 473832
  136063 string characters out of 5729481
- 544002 words of memory out of 5000000
+ 543002 words of memory out of 5000000
  31695 multiletter control sequences out of 15000+600000
  562005 words of font info for 55 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 72i,5n,79p,661b,359s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,5n,79p,675b,359s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on First-Booklet.xdv (4 pages, 43384 bytes).
+Output written on First-Booklet.xdv (4 pages, 42068 bytes).
