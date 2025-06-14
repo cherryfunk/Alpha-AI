@@ -1,11 +1,11 @@
 # Fdb version 4
-["xdvipdfmx"] 1749843401.96046 "First-Booklet.xdv" "First-Booklet.pdf" "First-Booklet" 1749843402.24977 0
-  "First-Booklet.xdv" 1749843401.91945 56704 fbaac031f6222858d56a6885496407a1 "xelatex"
+["xdvipdfmx"] 1749843872.86137 "First-Booklet.xdv" "First-Booklet.pdf" "First-Booklet" 1749843873.1454 0
+  "First-Booklet.xdv" 1749843872.82184 56740 f3baf2a75da41024294842cccb31e373 "xelatex"
   (generated)
   "First-Booklet.pdf"
   (rewritten before read)
-["xelatex"] 1749843401.32689 "/Users/cherryfunk/Applications/Repos/Alpha-AI/Booklets/First/First-Booklet.tex" "First-Booklet.xdv" "First-Booklet" 1749843402.24838 0
-  "/Users/cherryfunk/Applications/Repos/Alpha-AI/Booklets/First/First-Booklet.tex" 1749843401.09487 6672 39d0873e7cb03dd1d1a294b06c5b5b44 ""
+["xelatex"] 1749843872.2751 "/Users/cherryfunk/Applications/Repos/Alpha-AI/Booklets/First/First-Booklet.tex" "First-Booklet.xdv" "First-Booklet" 1749843873.14401 0
+  "/Users/cherryfunk/Applications/Repos/Alpha-AI/Booklets/First/First-Booklet.tex" 1749843872.06568 6675 1df16de2f67b28fee3bfc2f5e16a5b1f ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
@@ -155,10 +155,10 @@
   "/usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf" 1739380943 42148 61becc7c670cd061bb319c643c27fdd4 ""
   "/usr/local/texlive/2025/texmf-var/web2c/xetex/xelatex.fmt" 1749768850 5639813 ce8e24ccce182bc4c2d5e52fef0fb505 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "First-Booklet.aux" 1749843401.91866 253 e798cf2306ad57bbf00e2f9bcd81ec6f "xelatex"
-  "First-Booklet.out" 1749843401.9192 269 7fd668f7e3fc6c08443a69d10f6bc72f "xelatex"
-  "First-Booklet.tex" 1749843401.09487 6672 39d0873e7cb03dd1d1a294b06c5b5b44 ""
-  "First-Booklet.toc" 1749843401.9194 84 20544c8e102c82a15d078538febff1fa "xelatex"
+  "First-Booklet.aux" 1749843872.82093 253 e798cf2306ad57bbf00e2f9bcd81ec6f "xelatex"
+  "First-Booklet.out" 1749843872.82161 269 7fd668f7e3fc6c08443a69d10f6bc72f "xelatex"
+  "First-Booklet.tex" 1749843872.06568 6675 1df16de2f67b28fee3bfc2f5e16a5b1f ""
+  "First-Booklet.toc" 1749843872.8218 84 20544c8e102c82a15d078538febff1fa "xelatex"
   (generated)
   "First-Booklet.aux"
   "First-Booklet.log"
