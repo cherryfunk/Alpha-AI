@@ -10,20 +10,19 @@ from collections import defaultdict
 
 app = FastAPI()
 
-# Configurar CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todas las origenes
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos los métodos
-    allow_headers=["*"],  # Permite todos los headers
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # MongoDB Configuration
 MONGO_DETAILS = os.environ.get("MONGO_DETAILS", "mongodb://localhost:27017")
 DATABASE_NAME = "areas_db"
 COLLECTION_NAME = "areas"
-
 
 @app.on_event("startup")
 async def startup_db_client():
@@ -36,60 +35,16 @@ async def shutdown_db_client():
     app.mongodb_client.close()
     print("Disconnected from MongoDB")
 
-
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Areas of Human Existence API"}
+    return {"message": "Welcome to the Areas of Human Existence API - Structured Version"}
 
-@app.get("/areas")
-async def get_all_areas():
-    """Get all areas of human existence"""
+@app.get("/areas-structured")
+async def get_areas_structured():
+    """Return hierarchy using 'Sub-item' relation property, excluding sub-areas."""
     collection = app.mongodb[COLLECTION_NAME]
-    areas = []
-    async for area in collection.find({}):
-        area['_id'] = str(area['_id']) # Convert ObjectId to string for JSON serialization
-        areas.append(area)
-    return areas
-
-@app.get("/areas/{category}")
-async def get_areas_by_category(category: str):
-    """Get areas by category"""
-    collection = app.mongodb[COLLECTION_NAME]
-    filtered_areas = []
-    async for area in collection.find({"Category": category}):
-        area['_id'] = str(area['_id'])
-        filtered_areas.append(area)
-    if not filtered_areas:
-        raise HTTPException(status_code=404, detail=f"Category {category} not found")
-    return filtered_areas
-
-@app.get("/area/{name}")
-async def get_area_by_name(name: str):
-    """Get a specific area by name"""
-    collection = app.mongodb[COLLECTION_NAME]
-    area = await collection.find_one({"Name": name})
-    if area is None:
-        raise HTTPException(status_code=404, detail=f"Area {name} not found")
-    area['_id'] = str(area['_id'])
-    return area
-
-@app.get("/categories")
-async def get_categories():
-    """Get all unique categories"""
-    collection = app.mongodb[COLLECTION_NAME]
-    categories = await collection.distinct("Category")
-    return {"categories": categories}
-
-@app.put("/area/{old_name}")
-async def update_area_name(old_name: str, new_name: str = Body(..., embed=True)):
-    """
-    Update the name of an area.
-    """
-    collection = app.mongodb[COLLECTION_NAME]
-    result = await collection.update_one({"Name": old_name}, {"$set": {"Name": new_name}})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail=f"Area '{old_name}' not found")
-    return {"message": f"Area name updated from '{old_name}' to '{new_name}'"}
+    pages = [p async for p in collection.find({})]
+    return _build_relation_hierarchy(pages)
 
 @app.post("/notion-webhook")
 async def notion_webhook(request: Request):
@@ -132,7 +87,6 @@ def _plain_text_from_rich_text(rich_items: List[Dict]) -> str:
     """Helper to concatenate plain_text from Notion rich_text array."""
     return "".join(rt.get("plain_text", "") for rt in rich_items or [])
 
-
 def _extract_simple_fields(page: Dict) -> Dict:
     """Extract public fields from a Notion page object."""
     props = page.get("properties", {})
@@ -160,26 +114,14 @@ def _extract_simple_fields(page: Dict) -> Dict:
     simple["id"] = page.get("id")
     return simple
 
-
-@app.get("/areas-structured")
-async def get_areas_structured():
-    """Return hierarchy using 'Sub-item' relation property, excluding sub-areas."""
-    collection = app.mongodb[COLLECTION_NAME]
-    pages = [p async for p in collection.find({})]
-    return _build_relation_hierarchy(pages)
-
 def _level_name(page: Dict) -> str:
     level_prop = page.get("properties", {}).get("Level")
     if level_prop and level_prop.get("type") == "select" and level_prop.get("select"):
         return level_prop["select"].get("name", "")
     return ""
 
-
 def _is_sub_area(page: Dict) -> bool:
     return "sub" in _level_name(page).lower()
-
-
-# New helpers for structured hierarchy based on Level values
 
 def _number_value(page: Dict) -> float:
     """Return numeric order from '#' property if present, else infinity."""
@@ -187,9 +129,6 @@ def _number_value(page: Dict) -> float:
     if num_prop and num_prop.get("type") == "number" and num_prop.get("number") is not None:
         return num_prop["number"]
     return float("inf")
-
-
-# === Hierarchy via 'Sub-item' relation property ===
 
 def _build_relation_hierarchy(pages: List[Dict]) -> List[Dict]:
     """Build tree using 'Sub-item' relation graph, excluding Sub-Areas."""
