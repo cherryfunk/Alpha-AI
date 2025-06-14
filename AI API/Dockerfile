@@ -16,12 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your application code
 COPY . /app
 
-# Create a shell script to start the application
-RUN echo '#!/bin/bash\nuvicorn api:app --host 0.0.0.0 --port ${PORT:-8001}' > /app/start.sh && \
-    chmod +x /app/start.sh
-
 # Expose the port FastAPI will run on
 EXPOSE 8080
 
-# Run the shell script when the container starts
-CMD ["bash", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8080}"] 
+# Run the application with dynamic port for Cloud Run
+CMD exec uvicorn api:app --host 0.0.0.0 --port $PORT 

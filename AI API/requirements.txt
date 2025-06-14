@@ -26,4 +26,5 @@ typing_extensions==4.14.0
 tzdata==2025.2
 uvicorn==0.34.3
 notion-client==2.2.1
+neo4j==5.18.0
  

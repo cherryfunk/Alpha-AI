@@ -1,0 +1,43 @@
+graph TD
+  %% --- UI Layer ---
+  subgraph "User Interfaces"
+    direction LR
+    NotionUI["Notion (UI)"]
+    GPT["GPT"]
+    App["App"]
+  end
+
+  %% --- UI Interactions (clean layout) ---
+  NotionUI <--> |"Work with"| GPT
+  GPT <--> |"Work with"| App
+
+  %% --- Service / Worker Layer ---
+  FastAPI["FastAPI"]
+
+  %% --- Data Layer ---
+  subgraph "Databases"
+    NotionDB[("Notion DB")]
+    MongoDB[("MongoDB Atlas")]
+    Neo4j[("Neo4j Graph DB")]
+  end
+
+  %% --- Flows ---
+  NotionUI <--> |"internal"| NotionDB
+
+  %% Bidirectional sync between Notion and Mongo
+  NotionDB <--> |"sync"| MongoDB
+
+  %% Application traffic
+  App -- "REST" --> FastAPI
+  GPT -- "OpenAPI" --> FastAPI
+  FastAPI <--> |"read / write"| MongoDB
+
+  %% FastAPI graph interactions (read / write)
+  FastAPI <--> |"graph ops"| Neo4j
+
+  %% Bidirectional sync between Mongo and Neo4j
+  MongoDB <--> |"sync"| Neo4j
+
+  %% Responses back to UIs
+  FastAPI -- "JSON" --> App
+  FastAPI -- "JSON" --> GPT 

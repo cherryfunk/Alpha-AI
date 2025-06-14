@@ -7,6 +7,7 @@ import sys
 from notion_client import Client as NotionClient
 from typing import List, Dict
 from collections import defaultdict
+from neo4j import AsyncGraphDatabase
 
 app = FastAPI()
 
@@ -24,6 +25,11 @@ MONGO_DETAILS = os.environ.get("MONGO_DETAILS", "mongodb://localhost:27017")
 DATABASE_NAME = "areas_db"
 COLLECTION_NAME = "areas"
 
+# Neo4j Configuration (fail fast if missing)
+NEO4J_URI = os.environ["NEO4J_URI"]
+NEO4J_USER = os.environ["NEO4J_USER"]
+NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
+
 @app.on_event("startup")
 async def startup_db_client():
     app.mongodb_client = AsyncIOMotorClient(MONGO_DETAILS)
@@ -34,6 +40,18 @@ async def startup_db_client():
 async def shutdown_db_client():
     app.mongodb_client.close()
     print("Disconnected from MongoDB")
+
+@app.on_event("startup")
+async def startup_neo4j():
+    app.neo4j_driver = AsyncGraphDatabase.driver(
+        NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)
+    )
+    print("Connected to Neo4j")
+
+@app.on_event("shutdown")
+async def shutdown_neo4j():
+    await app.neo4j_driver.close()
+    print("Disconnected from Neo4j")
 
 @app.get("/")
 async def root():
@@ -82,6 +100,34 @@ async def notion_webhook(request: Request):
     if docs:
         await collection.insert_many(docs)
     return {"ok": True, "mirrored": len(docs)}
+
+@app.post("/graph/query")
+async def run_cypher_query(query: str = Body(..., embed=True)):
+    """Run an arbitrary Cypher query and return the result."""
+    async with app.neo4j_driver.session() as session:
+        result = await session.run(query)
+        records = [record.data() async for record in result]
+    return {"results": records}
+
+@app.post("/graph/edge")
+async def create_or_update_edge(
+    source_id: str = Body(...),
+    target_id: str = Body(...),
+    rel_type: str = Body(...),
+    properties: dict = Body(default={})
+):
+    """Create or update an edge (relationship) between two nodes."""
+    cypher = (
+        f"MATCH (a),(b) WHERE a.id = $source_id AND b.id = $target_id "
+        f"MERGE (a)-[r:{rel_type}]->(b) "
+        f"SET r += $properties RETURN a, r, b"
+    )
+    async with app.neo4j_driver.session() as session:
+        result = await session.run(
+            cypher, source_id=source_id, target_id=target_id, properties=properties
+        )
+        records = [record.data() async for record in result]
+    return {"results": records}
 
 def _plain_text_from_rich_text(rich_items: List[Dict]) -> str:
     """Helper to concatenate plain_text from Notion rich_text array."""
