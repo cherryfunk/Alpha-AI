@@ -1,11 +1,11 @@
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/areas-api', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/fastapi-areas-app', '.']
 
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/areas-api']
+    args: ['push', 'gcr.io/$PROJECT_ID/fastapi-areas-app']
 
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -13,16 +13,16 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'areas-api'
+      - 'fastapi-areas-app'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/areas-api'
+      - 'gcr.io/$PROJECT_ID/fastapi-areas-app'
       - '--region'
       - 'us-central1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--set-env-vars'
-      - 'MONGO_DETAILS=${_MONGO_DETAILS},NOTION_TOKEN=${_NOTION_TOKEN},NOTION_DATABASE_ID=${_NOTION_DATABASE_ID}'
+      - '--set-secrets'
+      - 'MONGO_DETAILS=MONGO_DETAILS:latest,NOTION_TOKEN=NOTION_TOKEN:latest,NOTION_DATABASE_ID=NOTION_DATABASE_ID:latest'
 
 images:
-  - 'gcr.io/$PROJECT_ID/areas-api' 
+  - 'gcr.io/$PROJECT_ID/fastapi-areas-app' 
