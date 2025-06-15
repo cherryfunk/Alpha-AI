@@ -22,7 +22,7 @@ LABELS = ["Conjunction", "Group", "Area"]  # depth 0,1,2(+)
 FULL_REFRESH = os.environ.get("NEO4J_FULL_REFRESH", "0") in {"1", "true", "True"}
 
 # FastAPI endpoint that returns the fully structured tree (same shape as sample_areas.json)
-AREAS_API = os.environ.get("AREAS_API", "https://fastapi-areas-app-782958835263.uc.r.appspot.com/areas-structured")
+AREAS_API = os.environ.get("AREAS_API", "https://fastapi-areas-app-782958835263.us-central1.run.app/areas-structured")
 
 # ------------------------------------------------------------------------
 app = FastAPI()
