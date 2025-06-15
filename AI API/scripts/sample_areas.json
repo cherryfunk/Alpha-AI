@@ -1,0 +1,113 @@
+[
+  {
+    "Name": "GovernorUPDATE3",
+    "id": "1eac96b5-3249-800f-8e44-c1fd9e577a17",
+    "children": [
+      {
+        "Name": "06. ESTEEM",
+        "id": "a38388fa-b623-4e2c-a2d8-ef49ccfd6520",
+        "children": [
+          {"Name": "-02. Technology", "id": "101cb448-be33-414d-aef0-da989ed549f7"},
+          {"Name": "06. Mind", "id": "76d66fea-907e-4b7b-9b7b-ab9e1b9e808d"}
+        ]
+      },
+      {
+        "Name": "07. REFLECTION",
+        "id": "3d6eab48-f3d7-48d6-ad18-dea30f197a22",
+        "children": [
+          {"Name": "07. Intellect", "id": "41d562fe-9642-4e9d-9d33-bc7e4cb54563"},
+          {"Name": "i. Imagination", "id": "d857a6f1-7109-432a-ad23-e9f58f3cd185"}
+        ]
+      },
+      {
+        "Name": "08. DEVELOPMENT",
+        "id": "4e964e33-4018-4cab-a6b4-97361c6dd2ee",
+        "children": [
+          {"Name": "08. Behavior", "id": "2f22fb4f-1e76-4ad5-bd54-3b5803df4f5b"},
+          {"Name": "09. Organiser ", "id": "de23caa5-e1de-4948-b8d4-021739300deb"},
+          {"Name": "10. Self-Government", "id": "f1080a8f-22d0-4be6-838e-e28962ebbce4"},
+          {"Name": "k. Time", "id": "f8693004-fb21-4a41-863e-4c8235804b56"}
+        ]
+      },
+      {
+        "Name": "09. HUMANITARIAN",
+        "id": "178c96b5-3249-805a-895a-c6dd4966e3c4",
+        "children": [
+          {"Name": "11. Conscience (Legal)", "id": "64ade06b-1118-4180-91ed-6897a8ee0b67"},
+          {"Name": "12. Person (Moral)", "id": "177c96b5-3249-80b4-a748-f27c37c4496b"},
+          {"Name": "13. Personality", "id": "1d3c96b5-3249-8025-b289-cef56ee9dc70"},
+          {"Name": "Human (Hero)", "id": "1674ad40-1384-4317-a303-b8c00c005d0b"}
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Pirate",
+    "id": "1ebc96b5-3249-80cc-b4a8-ddb3df3717f1",
+    "children": [
+      {
+        "Name": "01. BASIS",
+        "id": "1368ca18-c62a-4c0c-8c80-81a52e397587",
+        "children": [
+          {"Name": "-00. Home", "id": "177c96b5-3249-8035-9a2f-dd7537b5ba3b"},
+          {"Name": "-inf. Universe", "id": "f7812c35-1339-4727-ad13-1e8c35ff6982"},
+          {"Name": "-j. Nature", "id": "0743b034-29e2-4dd1-ae1b-ca45744fddfd"},
+          {"Name": "-k. Space", "id": "e4711bc5-bb7d-483d-82d9-e66afc3b41db"},
+          {"Name": "01. Material", "id": "666f53c9-86d2-4124-8963-34e0e6f9edda"}
+        ]
+      },
+      {
+        "Name": "05. SOCIAL LIFE",
+        "id": "8d15f576-9be9-4f35-8a0b-e557172848ba",
+        "children": [
+          {"Name": "05. Social", "id": "2f22e3eb-7af6-4f9d-91ee-df91c509b752"},
+          {"Name": "i*inf. Dream/Drug", "id": "20dc96b5-3249-80a5-81ad-c5fcfd994840"},
+          {"Name": "n. Life (Reproduction)", "id": "213e8d3d-6999-4e39-b3f5-3cde9fa308b9"}
+        ]
+      }
+    ]
+  },
+  {
+    "Name": "Warrior-Monk",
+    "id": "1eac96b5-3249-8021-8974-c90d88cfd9e7",
+    "children": [
+      {
+        "Name": "02. PHYSICAL",
+        "id": "039e4d0b-39ca-41cf-8bb5-6db34b9fb45a",
+        "children": [
+          {"Name": "-i. Reality", "id": "1d3c96b5-3249-8088-93c3-fe0c4576f907"},
+          {
+            "Name": "02. Body",
+            "id": "6e119f5f-3363-4eac-884f-612e45d09d59"
+          },
+          {"Name": "j. Culture (Audio)", "id": "186c96b5-3249-8087-a838-dadbc28be334"}
+        ]
+      },
+      {
+        "Name": "03. RESOURCE",
+        "id": "4a02f77e-a077-42db-8fe0-d606d3ed5db7",
+        "children": [
+          {"Name": "03. Hunter", "id": "18016bcc-a9f5-4232-9cc1-024c153e2c21"},
+          {"Name": "x. Ego", "id": "178c96b5-3249-8054-98bf-de52b8887b1a"},
+          {"Name": "ε. Consumer/Producer", "id": "111c96b5-3249-801c-ba7e-f9cd50af5551"}
+        ]
+      },
+      {
+        "Name": "04. EMOTIONAL",
+        "id": "52a8dba7-f138-4d1c-a372-b9ae53c34c0c",
+        "children": [
+          {"Name": "-01. Death (Survival)", "id": "7381a431-b0cd-4a19-a68d-582aa9d075c3"},
+          {"Name": "04. Soul", "id": "e04b4e02-4186-4a73-b155-b13d4257823a"}
+        ]
+      },
+      {
+        "Name": "10. TRANSCENDENCE",
+        "id": "20ec96b5-3249-80ba-97c8-d1e8178e5913",
+        "children": [
+          {"Name": "-i*inf. Sleep", "id": "20dc96b5-3249-8051-a125-dd927f3cb375"},
+          {"Name": "inf. Spirit", "id": "025beb97-0fc4-4249-856e-b9f3ab04a5b5"}
+        ]
+      }
+    ]
+  }
+] 
