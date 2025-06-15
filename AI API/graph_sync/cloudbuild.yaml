@@ -1,0 +1,5 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'AI API/graph_sync/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/graph-sync:latest', '.']
+images:
+- 'gcr.io/$PROJECT_ID/graph-sync:latest' 

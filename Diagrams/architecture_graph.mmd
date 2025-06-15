@@ -25,7 +25,7 @@ graph TD
   NotionUI <--> |"internal"| NotionDB
 
   %% Bidirectional sync between Notion and Mongo
-  NotionDB <--> |"sync"| MongoDB
+  NotionDB <--> |"areas sync"| MongoDB
 
   %% Application traffic
   App -- "REST" --> FastAPI
@@ -35,8 +35,8 @@ graph TD
   %% FastAPI graph interactions (read / write)
   FastAPI <--> |"graph ops"| Neo4j
 
-  %% Bidirectional sync between Mongo and Neo4j
-  MongoDB <--> |"sync"| Neo4j
+  %% Nodes sync between Mongo and Neo4j
+  MongoDB --> |"nodes sync"| Neo4j
 
   %% Responses back to UIs
   FastAPI -- "JSON" --> App
