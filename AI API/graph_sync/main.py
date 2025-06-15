@@ -1,109 +1,157 @@
 import os
 import asyncio
-import signal
+from typing import List, Dict, Any, Optional
+
+from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 from neo4j import AsyncGraphDatabase
-from fastapi import FastAPI
+import httpx
 
-# Map MongoDB collection names to Neo4j labels
-COLLECTION_LABELS = {
-    "areas": "Area",
-    "groups": "Group",
-    "conjunctions": "Conjunction",
-}
-
+# ----- CONFIG ------------------------------------------------------------
 MONGO_URI = os.environ.get("MONGO_DETAILS", "mongodb://localhost:27017")
-MONGO_DB_NAME = os.environ.get("DATABASE_NAME", "areas_db")
+MONGO_DB = os.environ.get("DATABASE_NAME", "areas_db")
+AREAS_COLLECTION = "areas"  # still used just to get a change-stream trigger
 
-DETACH_DELETE = os.environ.get("NEO4J_DETACH_DELETE", "1") in {"1", "true", "True"}
+NEO4J_URI = os.environ["NEO4J_URI"]
+NEO4J_USER = os.environ["NEO4J_USER"]
+NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
+LABELS = ["Conjunction", "Group", "Area"]  # depth 0,1,2(+)
+
+# If you want a fresh graph on every full-document update set this to true/1
+FULL_REFRESH = os.environ.get("NEO4J_FULL_REFRESH", "0") in {"1", "true", "True"}
+
+# FastAPI endpoint that returns the fully structured tree (same shape as sample_areas.json)
+AREAS_API = os.environ.get("AREAS_API", "https://fastapi-areas-app-782958835263.uc.r.appspot.com/areas-structured")
+
+# ------------------------------------------------------------------------
 app = FastAPI()
+
 
 @app.get("/")
 async def root():
     return {"status": "ok"}
 
-async def process_change(change: dict, label: str, session):
-    """Apply a single MongoDB change-stream event to Neo4j."""
-    op = change["operationType"]
 
-    if op in {"insert", "replace"}:
-        doc = change["fullDocument"]
-        doc_id = str(doc["_id"])
-        props = {k: v for k, v in doc.items() if k != "_id"}
-        await session.run(
-            f"MERGE (n:{label} {{id:$id}}) SET n += $props",
-            id=doc_id,
-            props=props,
-        )
+# -------------------- Neo4j helpers --------------------------------------
 
-    elif op == "update":
-        doc_id = str(change["documentKey"]["_id"])
-        updated = change["updateDescription"]["updatedFields"]
-        removed = change["updateDescription"]["removedFields"]
-        if updated:
-            await session.run(
-                f"MATCH (n:{label} {{id:$id}}) SET n += $props",
-                id=doc_id,
-                props=updated,
+async def merge_node(session, label: str, node_id: str, name: Optional[str]):
+    """MERGE a node by id and set its human-readable name property."""
+    cypher = f"MERGE (n:{label} {{id:$id}}) SET n.name = $name"
+    await session.run(cypher, id=node_id, name=name)
+
+
+async def merge_relationship(
+    session,
+    parent_label: str,
+    child_label: str,
+    parent_id: str,
+    child_id: str,
+):
+    if child_label == "Group":
+        rel = "HAS_GROUP"
+    elif child_label == "Area":
+        rel = "HAS_AREA"
+    else:
+        rel = "HAS_CHILD"
+    cypher = (
+        f"MATCH (p:{parent_label} {{id:$pid}}), (c:{child_label} {{id:$cid}})"
+        f" MERGE (p)-[:{rel}]->(c)"
+    )
+    await session.run(cypher, pid=parent_id, cid=child_id)
+
+
+async def create_subtree(
+    session,
+    node: Dict[str, Any],
+    depth: int = 0,
+    parent_id: Optional[str] = None,
+):
+    label = LABELS[depth] if depth < len(LABELS) else LABELS[-1]
+    node_id = node["id"]
+    name = node.get("Name") or node.get("name")
+
+    await merge_node(session, label, node_id, name)
+
+    if parent_id is not None:
+        parent_label = LABELS[depth - 1] if depth - 1 < len(LABELS) else LABELS[-1]
+        await merge_relationship(session, parent_label, label, parent_id, node_id)
+
+    for child in node.get("children", []):
+        await create_subtree(session, child, depth + 1, node_id)
+
+
+async def clear_graph(session):
+    await session.run("MATCH (n) DETACH DELETE n")
+
+
+# -------------------- fetch helper --------------------------------------
+
+async def fetch_tree() -> List[Dict[str, Any]]:
+    """Retrieve the nested Conjunction → Group → Area tree from FastAPI."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(AREAS_API)
+            r.raise_for_status()
+            data = r.json()
+            if isinstance(data, dict):
+                # endpoint may wrap list in {"data": [...]}
+                data = data.get("data") or data.get("results") or []
+            return data if isinstance(data, list) else []
+    except Exception as exc:
+        print(f"[ERROR] fetch_tree failed: {exc}")
+        return []
+
+
+# -------------------- Mongo change-stream handler ------------------------
+
+async def handle_change(change, neo_session):
+    # On ANY change event simply pull the latest structured tree from the API
+    roots = await fetch_tree()
+    if not roots:
+        print("[WARN] fetch_tree returned no roots; skipping change event")
+        return
+
+    if FULL_REFRESH:
+        await clear_graph(neo_session)
+
+    for root in roots:
+        await neo_session.run("MATCH (n:Conjunction {id:$id}) DETACH DELETE n", id=root["id"])
+        await create_subtree(neo_session, root)
+
+
+# -------------------- Worker task ---------------------------------------
+
+async def watch_areas_collection():
+    mongo_client = AsyncIOMotorClient(MONGO_URI)
+    db = mongo_client[MONGO_DB]
+    collection = db[AREAS_COLLECTION]
+
+    neo4j_driver = AsyncGraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    async with neo4j_driver.session() as neo_session:
+        # Ensure constraints
+        for lbl in LABELS:
+            await neo_session.run(
+                f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{lbl}) REQUIRE n.id IS UNIQUE"
             )
-        for field in removed:
-            await session.run(
-                f"MATCH (n:{label} {{id:$id}}) REMOVE n.{field}",
-                id=doc_id,
-            )
+        # Back-fill once on startup
+        print("[INFO] Performing initial back-fill via /areas-structured …")
+        roots = await fetch_tree()
+        for root in roots:
+            await create_subtree(neo_session, root)
 
-    elif op == "delete":
-        doc_id = str(change["documentKey"]["_id"])
-        delete_cypher = (
-            f"MATCH (n:{label} {{id:$id}}) {'DETACH DELETE' if DETACH_DELETE else 'DELETE'} n"
-        )
-        await session.run(delete_cypher, id=doc_id)
-
-async def watch_collection(db, coll_name: str, label: str, neo4j_driver):
-    """Watch a single MongoDB collection and apply events to Neo4j."""
-    collection = db[coll_name]
-    async with collection.watch(full_document='updateLookup') as stream:
-        async with neo4j_driver.session() as session:
+    # Now stream changes
+    async with collection.watch(full_document="updateLookup") as stream:
+        async with neo4j_driver.session() as neo_session:
             async for change in stream:
                 try:
-                    await process_change(change, label, session)
+                    await handle_change(change, neo_session)
                 except Exception as exc:
-                    # Log & continue (primitive logging to stdout)
-                    print(f"[ERROR] Failed processing change: {exc}\nChange: {change}")
+                    print(f"[ERROR] failed to process change: {exc}\n{change}")
 
-async def worker():
-    mongo_client = AsyncIOMotorClient(MONGO_URI)
-    db = mongo_client[MONGO_DB_NAME]
 
-    neo4j_driver = AsyncGraphDatabase.driver(
-        os.environ["NEO4J_URI"],
-        auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"]),
-    )
-
-    # Ensure constraints exist before streaming
-    async with neo4j_driver.session() as session:
-        for label in COLLECTION_LABELS.values():
-            await session.run(
-                f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.id IS UNIQUE"
-            )
-
-    # Spawn one task per collection
-    watch_tasks = [
-        asyncio.create_task(watch_collection(db, coll, label, neo4j_driver))
-        for coll, label in COLLECTION_LABELS.items()
-    ]
-
-    # Wait forever (until cancelled)
-    try:
-        await asyncio.gather(*watch_tasks)
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await neo4j_driver.close()
-        mongo_client.close()
+# -------------------- FastAPI startup -----------------------------------
 
 @app.on_event("startup")
-async def start_worker():
-    loop = asyncio.get_event_loop()
-    loop.create_task(worker()) 
+async def startup_event():
+    asyncio.create_task(watch_areas_collection()) 
