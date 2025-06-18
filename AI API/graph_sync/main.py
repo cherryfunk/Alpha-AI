@@ -24,6 +24,9 @@ FULL_REFRESH = os.environ.get("NEO4J_FULL_REFRESH", "0") in {"1", "true", "True"
 # FastAPI endpoint that returns the fully structured tree (same shape as sample_areas.json)
 AREAS_API = os.environ.get("AREAS_API", "https://fastapi-areas-app-782958835263.us-central1.run.app/areas-structured")
 
+# Motor / PyMongo error classes for robust retry logic
+from pymongo.errors import PyMongoError, OperationFailure
+
 # ------------------------------------------------------------------------
 app = FastAPI()
 
@@ -123,31 +126,53 @@ async def handle_change(change, neo_session):
 # -------------------- Worker task ---------------------------------------
 
 async def watch_areas_collection():
+    """Continuously watch the MongoDB collection and sync changes to Neo4j.
+
+    The function retries forever; if the change-stream cursor becomes
+    non-resumable (e.g. oplog history lost, CursorNotFound, network split) we
+    sleep a bit and start a fresh stream so the task never crashes.
+    """
+
     mongo_client = AsyncIOMotorClient(MONGO_URI)
     db = mongo_client[MONGO_DB]
     collection = db[AREAS_COLLECTION]
 
     neo4j_driver = AsyncGraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
+    # ---------- one-time graph init & back-fill --------------------------
     async with neo4j_driver.session() as neo_session:
         # Ensure constraints
         for lbl in LABELS:
             await neo_session.run(
                 f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{lbl}) REQUIRE n.id IS UNIQUE"
             )
-        # Back-fill once on startup
         print("[INFO] Performing initial back-fill via /areas-structured …")
         roots = await fetch_tree()
         for root in roots:
             await create_subtree(neo_session, root)
 
-    # Now stream changes
-    async with collection.watch(full_document="updateLookup") as stream:
-        async with neo4j_driver.session() as neo_session:
-            async for change in stream:
-                try:
-                    await handle_change(change, neo_session)
-                except Exception as exc:
-                    print(f"[ERROR] failed to process change: {exc}\n{change}")
+    # ---------- continuous change-stream loop ---------------------------
+    while True:
+        try:
+            async with collection.watch(full_document="updateLookup") as stream:
+                async with neo4j_driver.session() as neo_session:
+                    async for change in stream:
+                        try:
+                            await handle_change(change, neo_session)
+                        except Exception as exc:
+                            print(f"[ERROR] failed to process change: {exc}\n{change}")
+        except OperationFailure as exc:
+            # code 286 (ChangeStreamHistoryLost) cannot be resumed — start fresh
+            print(f"[WARN] change-stream operation failure ({exc.code}): {exc}. Restarting in 2 s …")
+            await asyncio.sleep(2)
+        except PyMongoError as exc:
+            # Generic PyMongo errors: log and retry
+            print(f"[WARN] PyMongo error while tailing change-stream: {exc}. Retrying in 5 s …")
+            await asyncio.sleep(5)
+        except Exception as exc:
+            # Catch-all so the task never dies
+            print(f"[ERROR] Unexpected error in change-stream loop: {exc}. Retrying in 5 s …")
+            await asyncio.sleep(5)
 
 
 # -------------------- FastAPI startup -----------------------------------

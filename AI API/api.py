@@ -1,13 +1,15 @@
 # api.py
-from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi import FastAPI, HTTPException, Body, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import sys
+import asyncio
 from notion_client import Client as NotionClient
 from typing import List, Dict
 from collections import defaultdict
 from neo4j import AsyncGraphDatabase
+from fastapi.responses import PlainTextResponse
 
 app = FastAPI()
 
@@ -65,41 +67,79 @@ async def get_areas_structured():
     return _build_relation_hierarchy(pages)
 
 @app.post("/notion-webhook")
-async def notion_webhook(request: Request):
+async def notion_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Handle Notion webhook POST events. Respond quickly (<=10 ms) and run the
+    expensive mirror-job in the background so Notion gets a 2xx immediately.
+    """
+
     payload = await request.json()
     print("Received Notion event (stdout):", payload)
     print("Received Notion event (stderr):", payload, file=sys.stderr)
-    # Handle verification
+
+    # 1) Verification handshake — just echo the token back once.
     if "verification_token" in payload:
         return {"verification_token": payload["verification_token"]}
-    # On any event, mirror the entire Notion database to MongoDB
+
+    # 2) Defer the heavy sync so we can ACK right away.
+    background_tasks.add_task(_mirror_notion_to_mongo)
+
+    return {"ok": True}
+
+@app.get("/notion-webhook", include_in_schema=False)
+async def notion_webhook_healthcheck():
+    return PlainTextResponse("ok", status_code=200)
+
+async def _mirror_notion_to_mongo():
+    """Fetch the entire Notion DB and mirror it into MongoDB.
+
+    Runs in the background; errors are logged but won't affect webhook ACKs.
+    """
+
     NOTION_TOKEN = os.environ.get("NOTION_TOKEN")
     NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")
+
+    if not (NOTION_TOKEN and NOTION_DATABASE_ID):
+        print("[ERROR] NOTION_TOKEN or NOTION_DATABASE_ID env vars are missing.")
+        return
+
     notion = NotionClient(auth=NOTION_TOKEN)
-    # Fetch all pages from the Notion database
-    all_pages = []
-    next_cursor = None
-    while True:
-        response = notion.databases.query(
-            **{"database_id": NOTION_DATABASE_ID, "start_cursor": next_cursor} if next_cursor else {"database_id": NOTION_DATABASE_ID}
-        )
-        all_pages.extend(response["results"])
-        if response.get("has_more"):
-            next_cursor = response["next_cursor"]
-        else:
-            break
-    # Prepare documents for MongoDB (use Notion page id as _id)
-    docs = []
-    for page in all_pages:
-        doc = dict(page)
-        doc["_id"] = page["id"]
-        docs.append(doc)
-    collection = app.mongodb[COLLECTION_NAME]
-    # Clear the collection and insert all pages
-    await collection.delete_many({})
-    if docs:
-        await collection.insert_many(docs)
-    return {"ok": True, "mirrored": len(docs)}
+
+    # ---- Pull all pages ---------------------------------------------------
+    try:
+        all_pages = []
+        next_cursor = None
+        while True:
+            query_kwargs = {"database_id": NOTION_DATABASE_ID}
+            if next_cursor:
+                query_kwargs["start_cursor"] = next_cursor
+
+            response = notion.databases.query(**query_kwargs)
+            all_pages.extend(response.get("results", []))
+
+            if response.get("has_more"):
+                next_cursor = response.get("next_cursor")
+            else:
+                break
+    except Exception as exc:
+        print(f"[ERROR] Failed to fetch pages from Notion: {exc}")
+        return
+
+    # ---- Mirror into MongoDB --------------------------------------------
+    try:
+        docs = []
+        for page in all_pages:
+            doc = dict(page)
+            doc["_id"] = page["id"]
+            docs.append(doc)
+
+        collection = app.mongodb[COLLECTION_NAME]
+        await collection.delete_many({})
+        if docs:
+            await collection.insert_many(docs)
+
+        print(f"[INFO] Mirrored {len(docs)} Notion pages into MongoDB.")
+    except Exception as exc:
+        print(f"[ERROR] Failed to mirror pages into MongoDB: {exc}")
 
 @app.post("/graph/query")
 async def run_cypher_query(query: str = Body(..., embed=True)):
